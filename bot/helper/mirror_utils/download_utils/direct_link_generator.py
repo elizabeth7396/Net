@@ -70,6 +70,8 @@ def direct_link_generator(link: str):
         return appdrive(link)
     elif is_gdtot_link(link):
         return gdtot(link)
+    elif any(x in link for x in ['terabox', 'nephobox', '4funbox', 'mirrobox', 'momerybox', 'teraboxapp']):
+        return terabox(link)
     elif any(x in link for x in fmed_list):
         return fembed(link)
     elif any(x in link for x in ['sbembed.com', 'watchsb.com', 'streamsb.net', 'sbplay.org']):
@@ -475,3 +477,24 @@ def gdtot(url: str) -> str:
     except:
         raise DirectDownloadLinkException("ERROR: Try in your broswer, mostly file not found or user limit exceeded!")
     return f'https://drive.google.com/open?id={decoded_id}'
+
+def terabox(url) -> str:
+    if not path.isfile('terabox.txt'):
+        raise DirectDownloadLinkException("ERROR: terabox.txt not found")
+    try:
+        session = rsession()
+        res = session.request('GET', url)
+        key = res.url.split('?surl=')[-1]
+        jar = MozillaCookieJar('terabox.txt')
+        jar.load()
+        session.cookies.update(jar)
+        res = session.request('GET', f'https://www.terabox.com/share/list?app_id=250528&shorturl={key}&root=1')
+        result = res.json()['list']
+    except Exception as e:
+        raise DirectDownloadLinkException(f"ERROR: {e.__class__.__name__}")
+    if len(result) > 1:
+        raise DirectDownloadLinkException("ERROR: Can't download mutiple files")
+    result = result[0]
+    if result['isdir'] != '0':
+        raise DirectDownloadLinkException("ERROR: Can't download folder")
+    return result['dlink']
